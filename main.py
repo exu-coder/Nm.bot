@@ -58,7 +58,7 @@ def bold(text):
 
 def user_menu(user_id):
     is_admin_user = is_admin(user_id)
-    
+
     keyboard = [
         [
             KeyboardButton("🎬 " + bold("RANDOM")),
@@ -68,12 +68,12 @@ def user_menu(user_id):
             KeyboardButton("ℹ️ " + bold("ABOUT"))
         ]
     ]
-    
+
     if is_admin_user:
         keyboard.append([
             KeyboardButton("🔑 " + bold("ADMIN"))
         ])
-    
+
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def admin_menu():
@@ -116,9 +116,9 @@ async def send_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user = update.effective_user
     user_mode[user_id] = False
-    
+
     user_photos = await context.bot.get_user_profile_photos(user_id, limit=1)
-    
+
     welcome_text = (
         f"🎬 {bold('WELCOME TO P4ON BOT')}\n\n"
         f"👋 {bold('HELLO')} {bold(user.first_name)}!\n"
@@ -126,7 +126,7 @@ async def send_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📁 {bold(str(len(video_ids)))} {bold('VIDEOS AVAILABLE')}\n\n"
         f"👇 {bold('CLICK A BUTTON TO START')}"
     )
-    
+
     if user_photos.total_count > 0:
         photo = user_photos.photos[0][-1]
         await update.message.reply_photo(
@@ -144,9 +144,9 @@ async def admin_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user = update.effective_user
     user_mode[user_id] = True
-    
+
     user_photos = await context.bot.get_user_profile_photos(user_id, limit=1)
-    
+
     welcome_text = (
         f"🎬 {bold('WELCOME TO P4ON BOT')}\n\n"
         f"🔑 {bold('ADMIN MODE')}\n"
@@ -156,7 +156,7 @@ async def admin_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📺 {bold('CHANNEL')}: @P49NBOOBS\n\n"
         f"📊 {bold('SELECT AN OPTION')}"
     )
-    
+
     if user_photos.total_count > 0:
         photo = user_photos.photos[0][-1]
         await update.message.reply_photo(
@@ -174,7 +174,7 @@ async def admin_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    
+
     if is_admin(user_id):
         await admin_welcome(update, context)
     else:
@@ -185,7 +185,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
-    
+
     # ===== SWITCH TO ADMIN =====
     if text == "🔑 " + bold("ADMIN"):
         if is_admin(user_id):
@@ -193,7 +193,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("⛔ " + bold("ACCESS DENIED"))
         return
-    
+
     # ===== SWITCH TO USER =====
     if text == "👤 " + bold("USER MODE"):
         if is_admin(user_id):
@@ -202,7 +202,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text("⛔ " + bold("ACCESS DENIED"))
         return
-    
+
     # ===== BACK =====
     if text == "🔙 " + bold("BACK"):
         if is_admin(user_id) and user_mode.get(user_id, False):
@@ -210,12 +210,12 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await send_welcome(update, context)
         return
-    
+
     # ===== MAIN MENU =====
     if text == "🏠 " + bold("MENU"):
         await start(update, context)
         return
-    
+
     # ===== RANDOM VIDEO =====
     if text in ["🎬 " + bold("RANDOM"), "🎲 " + bold("ANOTHER")]:
         if not video_ids:
@@ -224,17 +224,17 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=user_menu(user_id) if not is_admin(user_id) else admin_menu()
             )
             return
-        
+
         video_id = random.choice(video_ids)
         caption = f"🎥 {bold('RANDOM VIDEO')}\n\n📊 {bold('VIDEO')} {bold(str(video_ids.index(video_id) + 1))} {bold('OF')} {bold(str(len(video_ids)))}"
-        
+
         await update.message.reply_video(
             video_id,
             caption=caption,
             reply_markup=after_video_menu()
         )
         return
-    
+
     # ===== LATEST VIDEO =====
     if text == "📌 " + bold("LATEST"):
         if not video_ids:
@@ -243,17 +243,17 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=user_menu(user_id) if not is_admin(user_id) else admin_menu()
             )
             return
-        
+
         video_id = video_ids[-1]
         caption = f"📌 {bold('LATEST VIDEO')}\n\n📊 {bold('VIDEO')} #{bold(str(len(video_ids)))}"
-        
+
         await update.message.reply_video(
             video_id,
             caption=caption,
             reply_markup=after_video_menu()
         )
         return
-    
+
     # ===== ABOUT =====
     if text == "ℹ️ " + bold("ABOUT"):
         about_text = (
@@ -268,13 +268,13 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=user_menu(user_id) if not is_admin(user_id) else admin_menu()
         )
         return
-    
+
     # ===== ADMIN CHECK =====
     if text in ["📊 " + bold("DATABASE"), "🔄 " + bold("REFRESH"), "📹 " + bold("COUNT"), "📁 " + bold("EXPORT")]:
         if not is_admin(user_id):
             await update.message.reply_text("⛔ " + bold("ACCESS DENIED"))
             return
-    
+
     # ===== ADMIN STATS =====
     if text == "📊 " + bold("DATABASE"):
         stats = (
@@ -287,7 +287,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(stats, reply_markup=admin_menu())
         return
-    
+
     # ===== ADMIN REFRESH =====
     if text == "🔄 " + bold("REFRESH"):
         await update.message.reply_text("🔄 " + bold("REFRESHING DATABASE..."))
@@ -298,7 +298,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(text_msg, reply_markup=admin_menu())
         return
-    
+
     # ===== ADMIN COUNT =====
     if text == "📹 " + bold("COUNT"):
         count = (
@@ -309,7 +309,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(count, reply_markup=admin_menu())
         return
-    
+
     # ===== ADMIN EXPORT =====
     if text == "📁 " + bold("EXPORT"):
         save_video_ids(video_ids)
@@ -322,134 +322,181 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(export, reply_markup=admin_menu())
         return
 
-# ============ FIXED VIDEO INDEXING FOR CHANNELS ============
+# ============ FIXED CHANNEL POST HANDLER ============
+
+async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle new posts in the channel - FIXED for channel video detection"""
+    global video_ids
+
+    # Handle channel_post (new posts in channel)
+    if update.channel_post:
+        chat_id = update.channel_post.chat.id
+
+        # Only process posts from our target channel
+        if chat_id == CHANNEL_ID:
+            # Check if it's a video
+            if update.channel_post.video:
+                video_id = update.channel_post.video.file_id
+                if video_id not in video_ids:
+                    video_ids.append(video_id)
+                    save_video_ids(video_ids)
+                    print(f"📹 New video detected via channel_post! Total: {len(video_ids)}")
+                    print(f"   File ID: {video_id[:30]}...")
+
+            # Check if it's a document that is a video
+            elif update.channel_post.document:
+                mime = update.channel_post.document.mime_type
+                if mime and ('video' in mime or mime == 'application/octet-stream'):
+                    video_id = update.channel_post.document.file_id
+                    if video_id not in video_ids:
+                        video_ids.append(video_id)
+                        save_video_ids(video_ids)
+                        print(f"📹 New video (as document) detected! Total: {len(video_ids)}")
+
+# ============ ADD VIDEO COMMAND (Admin) ============
+
+async def add_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin command to add a video by replying to it"""
+    if not is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ " + bold("ACCESS DENIED"))
+        return
+
+    # Check if admin replied to a video
+    if update.message.reply_to_message and update.message.reply_to_message.video:
+        video_id = update.message.reply_to_message.video.file_id
+        if video_id not in video_ids:
+            video_ids.append(video_id)
+            save_video_ids(video_ids)
+            await update.message.reply_text(
+                f"✅ {bold('VIDEO ADDED')}\n\n"
+                f"📹 {bold('TOTAL')}: {bold(str(len(video_ids)))}"
+            )
+        else:
+            await update.message.reply_text("⚠️ " + bold("VIDEO ALREADY EXISTS"))
+
+    elif update.message.reply_to_message and update.message.reply_to_message.document:
+        mime = update.message.reply_to_message.document.mime_type
+        if mime and 'video' in mime:
+            video_id = update.message.reply_to_message.document.file_id
+            if video_id not in video_ids:
+                video_ids.append(video_id)
+                save_video_ids(video_ids)
+                await update.message.reply_text(
+                    f"✅ {bold('VIDEO ADDED')}\n\n"
+                    f"📹 {bold('TOTAL')}: {bold(str(len(video_ids)))}"
+                )
+            else:
+                await update.message.reply_text("⚠️ " + bold("VIDEO ALREADY EXISTS"))
+        else:
+            await update.message.reply_text("⚠️ " + bold("NOT A VIDEO FILE"))
+    else:
+        await update.message.reply_text(
+            "⚠️ " + bold("REPLY TO A VIDEO") + "\n\n"
+            "💡 " + bold("Forward a video from channel and reply /add to it")
+        )
+
+# ============ SCAN CHANNEL ============
 
 async def scan_channel():
-    """Scan channel for videos - Fixed for channels"""
+    """Scan channel for videos - Fixed approach"""
     global video_ids
-    video_ids = []
-    print(f"🔍 Scanning channel: {CHANNEL_ID}")
-    
+    print(f"🔍 Checking channel: {CHANNEL_ID}")
+
     try:
-        # Get chat info
-        chat = await app.bot.get_chat(CHANNEL_ID)
-        print(f"✅ Found channel: {chat.title}")
-        
-        # Method 1: Try to forward a message to get video IDs
-        # This is the most reliable way for channels
+        # Check bot membership in channel
         try:
-            print("📥 Method 1: Checking if bot is admin...")
-            # Check if bot is admin
-            try:
-                member = await app.bot.get_chat_member(CHANNEL_ID, app.bot.id)
-                print(f"👤 Bot status: {member.status}")
-                if member.status not in ['administrator', 'creator']:
-                    print("⚠️ Bot is not admin! Please add bot as admin.")
-            except Exception as e:
-                print(f"⚠️ Cannot check membership: {e}")
+            member = await app.bot.get_chat_member(CHANNEL_ID, app.bot.id)
+            print(f"👤 Bot status in channel: {member.status}")
+            if member.status not in ['administrator', 'creator']:
+                print("⚠️ WARNING: Bot is not admin in channel!")
+                print("   → Add bot as ADMIN with these permissions:")
+                print("      • Post Messages")
+                print("      • Edit Messages") 
+                print("      • Delete Messages")
         except Exception as e:
-            print(f"⚠️ Method 1 failed: {e}")
-        
-        # Method 2: Use get_updates (works for channels with recent messages)
-        try:
-            print("📥 Method 2: Using get_updates...")
-            updates = await app.bot.get_updates(limit=200, timeout=10)
-            found = 0
-            for update in updates:
-                # Check channel_post
-                if update.channel_post and update.channel_post.chat.id == CHANNEL_ID:
-                    if update.channel_post.video:
-                        video_ids.append(update.channel_post.video.file_id)
-                        found += 1
-                        print(f"📹 Found video #{found}: {update.channel_post.video.file_id[:20]}...")
-                # Check message
-                elif update.message and update.message.chat.id == CHANNEL_ID:
-                    if update.message.video:
-                        video_ids.append(update.message.video.file_id)
-                        found += 1
-                        print(f"📹 Found video #{found}: {update.message.video.file_id[:20]}...")
-            print(f"📊 Found {found} videos via get_updates")
-        except Exception as e:
-            print(f"⚠️ Method 2 failed: {e}")
-        
-        # Method 3: Try using get_chat_history (some versions support it)
+            print(f"⚠️ Cannot check membership: {e}")
+
+        # Load existing videos from JSON
+        video_ids = load_video_ids()
+        print(f"📊 Loaded {len(video_ids)} videos from {JSON_FILE}")
+
         if len(video_ids) == 0:
-            try:
-                print("📥 Method 3: Trying get_chat_history...")
-                async for msg in app.bot.get_chat_history(chat_id=CHANNEL_ID, limit=500):
-                    if msg.video:
-                        video_ids.append(msg.video.file_id)
-                        print(f"📹 Found: {msg.video.file_id[:20]}...")
-            except Exception as e:
-                print(f"⚠️ Method 3 failed: {e}")
-        
-        # Save to JSON
+            print("💡 No videos found. To add videos:")
+            print("   1. Forward videos from channel to bot, then reply /add")
+            print("   2. Post new videos in channel (auto-detected)")
+            print("   3. Manually add file_ids to video_ids.json")
+
         save_video_ids(video_ids)
-        print(f"✅ Loaded {len(video_ids)} videos")
-        
-        if len(video_ids) == 0:
-            print("⚠️ No videos found! Solutions:")
-            print("   1. Make sure bot is ADMIN in the channel")
-            print("   2. Post a new video in the channel (triggers detection)")
-            print("   3. Use a GROUP instead of CHANNEL (groups work better)")
-            print("   4. Make sure bot has 'Post Messages' permission")
-            
+
     except Exception as e:
         print(f"❌ Error: {e}")
-
-# ============ CHANNEL POST HANDLER (Detects new videos) ============
-
-async def handle_new_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Auto-detect new videos posted in channel"""
-    if update.channel_post and update.channel_post.video:
-        video_ids.append(update.channel_post.video.file_id)
-        save_video_ids(video_ids)
-        print(f"📹 New video detected! Total: {len(video_ids)}")
-    elif update.message and update.message.video:
-        # Also detect if video is sent as message
-        if update.message.chat.id == CHANNEL_ID:
-            video_ids.append(update.message.video.file_id)
-            save_video_ids(video_ids)
-            print(f"📹 New video detected in message! Total: {len(video_ids)}")
-
-async def post_init():
-    await scan_channel()
 
 # ============ HELP COMMAND ============
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await start(update, context)
+    help_text = (
+        f"🤖 {bold('P4ON BOT HELP')}\n\n"
+        f"🎬 {bold('RANDOM')} - Get a random video\n"
+        f"📌 {bold('LATEST')} - Get the latest video\n"
+        f"ℹ️ {bold('ABOUT')} - Bot information\n\n"
+        f"🔑 {bold('ADMIN COMMANDS')}\n"
+        f"/add - Reply to a video to add it\n"
+        f"📊 {bold('DATABASE')} - View database info\n"
+        f"🔄 {bold('REFRESH')} - Refresh database\n"
+        f"📹 {bold('COUNT')} - Video count\n"
+        f"📁 {bold('EXPORT')} - Save to JSON"
+    )
+    await update.message.reply_text(help_text)
 
 # ============ MAIN ============
 
 async def main():
     global app
-    
+
     app = Application.builder().token(BOT_TOKEN).build()
-    
+
+    # ===== REGISTER HANDLERS (ORDER MATTERS!) =====
+
+    # 1. Channel post handler FIRST (highest priority, group 0)
+    # This catches new videos posted in the channel
+    app.add_handler(MessageHandler(filters.ChatType.CHANNEL, handle_channel_post), group=0)
+
+    # 2. Command handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
-    app.add_handler(MessageHandler(filters.VIDEO & filters.Chat(CHANNEL_ID), handle_new_video))
-    
+    app.add_handler(CommandHandler("add", add_video))
+
+    # 3. Text message handler (group 1, lower priority)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages), group=1)
+
     await post_init()
-    
-    print("🤖 Bot Running with BOLD FONT!")
+
+    print("=" * 50)
+    print("🤖 P4ON BOT STARTED!")
+    print("=" * 50)
     print(f"🔑 Admin ID: {ADMIN_ID}")
     print(f"📺 Channel: {CHANNEL_ID}")
-    
+    print(f"📁 Database: {JSON_FILE}")
+    print("=" * 50)
+    print("⚡ IMPORTANT: Bot must be ADMIN in the channel!")
+    print("⚡ Use /add command to manually add existing videos")
+    print("⚡ New videos posted in channel auto-detected")
+    print("=" * 50)
+
+    # CRITICAL FIX: Use allowed_updates to receive channel_posts
     await app.initialize()
     await app.start()
-    await app.updater.start_polling()
-    
+    await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+
     try:
         await asyncio.Event().wait()
     except KeyboardInterrupt:
-        pass
+        print("\n🛑 Bot stopped by user")
     finally:
         await app.updater.stop()
         await app.stop()
         await app.shutdown()
+        print("✅ Bot shutdown complete")
 
 if __name__ == "__main__":
     asyncio.run(main())
