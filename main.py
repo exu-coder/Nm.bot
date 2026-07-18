@@ -31,81 +31,143 @@ video_ids = load_video_ids()
 def is_admin(user_id):
     return user_id == ADMIN_ID
 
-# ============ STYLED REPLY KEYBOARDS ============
+# ============ REPLY KEYBOARDS ============
 
 def user_menu(user_id):
     is_admin_user = is_admin(user_id)
     
     keyboard = [
         [
-            KeyboardButton(text="🎬 𝐑𝐀𝐍𝐃𝐎𝐌"),
-            KeyboardButton(text="📌 𝐋𝐀𝐓𝐄𝐒𝐓")
+            KeyboardButton("🎬 𝐑𝐀𝐍𝐃𝐎𝐌"),
+            KeyboardButton("📌 𝐋𝐀𝐓𝐄𝐒𝐓")
         ],
         [
-            KeyboardButton(text="ℹ️ 𝐀𝐁𝐎𝐔𝐓")
+            KeyboardButton("ℹ️ 𝐀𝐁𝐎𝐔𝐓")
         ]
     ]
     
     if is_admin_user:
         keyboard.append([
-            KeyboardButton(text="🔑 𝐀𝐃𝐌𝐈𝐍")
+            KeyboardButton("🔑 𝐀𝐃𝐌𝐈𝐍")
         ])
     
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def admin_menu():
     keyboard = [
         [
-            KeyboardButton(text="📊 𝐃𝐀𝐓𝐀𝐁𝐀𝐒𝐄"),
-            KeyboardButton(text="🔄 𝐑𝐄𝐅𝐑𝐄𝐒𝐇")
+            KeyboardButton("📊 𝐃𝐀𝐓𝐀𝐁𝐀𝐒𝐄"),
+            KeyboardButton("🔄 𝐑𝐄𝐅𝐑𝐄𝐒𝐇")
         ],
         [
-            KeyboardButton(text="📹 𝐂𝐎𝐔𝐍𝐓"),
-            KeyboardButton(text="📁 𝐄𝐗𝐏𝐎𝐑𝐓")
+            KeyboardButton("📹 𝐂𝐎𝐔𝐍𝐓"),
+            KeyboardButton("📁 𝐄𝐗𝐏𝐎𝐑𝐓")
         ],
         [
-            KeyboardButton(text="👤 𝐔𝐒𝐄𝐑 𝐌𝐎𝐃𝐄"),
-            KeyboardButton(text="🔙 𝐁𝐀𝐂𝐊")
+            KeyboardButton("👤 𝐔𝐒𝐄𝐑 𝐌𝐎𝐃𝐄"),
+            KeyboardButton("🔙 𝐁𝐀𝐂𝐊")
         ]
     ]
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def after_video_menu():
     keyboard = [
         [
-            KeyboardButton(text="🎲 𝐀𝐍𝐎𝐓𝐇𝐄𝐑"),
-            KeyboardButton(text="📌 𝐋𝐀𝐓𝐄𝐒𝐓")
+            KeyboardButton("🎲 𝐀𝐍𝐎𝐓𝐇𝐄𝐑"),
+            KeyboardButton("📌 𝐋𝐀𝐓𝐄𝐒𝐓")
         ],
         [
-            KeyboardButton(text="🏠 𝐌𝐄𝐍𝐔")
+            KeyboardButton("🏠 𝐌𝐄𝐍𝐔")
         ]
     ]
-    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # ============ BOT INIT ============
 
+app = None
 user_mode = {}
+
+# ============ WELCOME MESSAGE WITH PROFILE PICTURE ============
+
+async def send_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send welcome message with user's profile picture"""
+    user_id = update.effective_user.id
+    user = update.effective_user
+    user_mode[user_id] = False
+    
+    # Get user's profile picture
+    user_photos = await context.bot.get_user_profile_photos(user_id, limit=1)
+    
+    welcome_text = (
+        f"🎬 **𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 𝐏𝟒𝐎𝐍 𝐁𝐎𝐓**\n\n"
+        f"👋 **𝐇𝐄𝐋𝐋𝐎** {user.first_name}!\n"
+        f"🆔 **𝐔𝐒𝐄𝐑 𝐈𝐃**: {user_id}\n"
+        f"📁 **{len(video_ids)} 𝐕𝐈𝐃𝐄𝐎𝐒 𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝐄**\n\n"
+        f"👇 **𝐂𝐋𝐈𝐂𝐊 𝐀 𝐁𝐔𝐓𝐓𝐎𝐍 𝐓𝐎 𝐒𝐓𝐀𝐑𝐓**"
+    )
+    
+    # If user has profile picture, send it with the message
+    if user_photos.total_count > 0:
+        photo = user_photos.photos[0][-1]  # Get the largest photo
+        await update.message.reply_photo(
+            photo.file_id,
+            caption=welcome_text,
+            parse_mode="Markdown",
+            reply_markup=user_menu(user_id) if not is_admin(user_id) else admin_menu()
+        )
+    else:
+        # If no profile picture, send text message
+        await update.message.reply_text(
+            welcome_text,
+            parse_mode="Markdown",
+            reply_markup=user_menu(user_id) if not is_admin(user_id) else admin_menu()
+        )
+
+# ============ ADMIN WELCOME ============
+
+async def admin_welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send admin welcome message"""
+    user_id = update.effective_user.id
+    user = update.effective_user
+    user_mode[user_id] = True
+    
+    # Get user's profile picture
+    user_photos = await context.bot.get_user_profile_photos(user_id, limit=1)
+    
+    welcome_text = (
+        f"🎬 **𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 𝐏𝟒𝐎𝐍 𝐁𝐎𝐓**\n\n"
+        f"🔑 **𝐀𝐃𝐌𝐈𝐍 𝐌𝐎𝐃𝐄**\n"
+        f"👋 **𝐇𝐄𝐋𝐋𝐎** {user.first_name}!\n"
+        f"🆔 **𝐀𝐃𝐌𝐈𝐍 𝐈𝐃**: {user_id}\n"
+        f"📁 **{len(video_ids)} 𝐕𝐈𝐃𝐄𝐎𝐒**\n"
+        f"📺 **𝐂𝐇𝐀𝐍𝐍𝐄𝐋**: @𝐏𝟒𝟗𝐍𝐁𝐎𝐎𝐁𝐒\n\n"
+        f"📊 **𝐒𝐄𝐋𝐄𝐂𝐓 𝐀𝐍 𝐎𝐏𝐓𝐈𝐎𝐍**"
+    )
+    
+    if user_photos.total_count > 0:
+        photo = user_photos.photos[0][-1]
+        await update.message.reply_photo(
+            photo.file_id,
+            caption=welcome_text,
+            parse_mode="Markdown",
+            reply_markup=admin_menu()
+        )
+    else:
+        await update.message.reply_text(
+            welcome_text,
+            parse_mode="Markdown",
+            reply_markup=admin_menu()
+        )
 
 # ============ START COMMAND ============
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    user_mode[user_id] = False
     
     if is_admin(user_id):
-        text = (
-            f"🎬 **𝐌𝐄𝐃𝐈𝐀 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑**\n\n"
-            f"👤 **𝐔𝐒𝐄𝐑 𝐌𝐎𝐃𝐄**\n"
-            f"📁 **{len(video_ids)} 𝐕𝐈𝐃𝐄𝐎𝐒**\n\n"
-            f"👇 **𝐂𝐋𝐈𝐂𝐊 𝐀 𝐁𝐔𝐓𝐓𝐎𝐍**"
-        )
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=user_menu(user_id))
+        await admin_welcome(update, context)
     else:
-        text = (
-            f"🎬 **𝐌𝐄𝐃𝐈𝐀 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑**\n\n"
-            f"👇 **𝐂𝐋𝐈𝐂𝐊 𝐀 𝐁𝐔𝐓𝐓𝐎𝐍**"
-        )
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=user_menu(user_id))
+        await send_welcome(update, context)
 
 # ============ MESSAGE HANDLER ============
 
@@ -116,14 +178,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ===== SWITCH TO ADMIN =====
     if text == "🔑 𝐀𝐃𝐌𝐈𝐍":
         if is_admin(user_id):
-            user_mode[user_id] = True
-            text_msg = (
-                f"🎬 **𝐌𝐄𝐃𝐈𝐀 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑**\n\n"
-                f"🔑 **𝐀𝐃𝐌𝐈𝐍 𝐌𝐎𝐃𝐄**\n"
-                f"📁 **{len(video_ids)} 𝐕𝐈𝐃𝐄𝐎𝐒**\n\n"
-                f"📊 **𝐒𝐄𝐋𝐄𝐂𝐓 𝐀𝐍 𝐎𝐏𝐓𝐈𝐎𝐍**"
-            )
-            await update.message.reply_text(text_msg, parse_mode="Markdown", reply_markup=admin_menu())
+            await admin_welcome(update, context)
         else:
             await update.message.reply_text("⛔ **𝐀𝐂𝐂𝐄𝐒𝐒 𝐃𝐄𝐍𝐈𝐄𝐃**", parse_mode="Markdown")
         return
@@ -132,13 +187,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "👤 𝐔𝐒𝐄𝐑 𝐌𝐎𝐃𝐄":
         if is_admin(user_id):
             user_mode[user_id] = False
-            text_msg = (
-                f"🎬 **𝐌𝐄𝐃𝐈𝐀 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑**\n\n"
-                f"👤 **𝐔𝐒𝐄𝐑 𝐌𝐎𝐃𝐄**\n"
-                f"📁 **{len(video_ids)} 𝐕𝐈𝐃𝐄𝐎𝐒**\n\n"
-                f"👇 **𝐂𝐋𝐈𝐂𝐊 𝐀 𝐁𝐔𝐓𝐓𝐎𝐍**"
-            )
-            await update.message.reply_text(text_msg, parse_mode="Markdown", reply_markup=user_menu(user_id))
+            await send_welcome(update, context)
         else:
             await update.message.reply_text("⛔ **𝐀𝐂𝐂𝐄𝐒𝐒 𝐃𝐄𝐍𝐈𝐄𝐃**", parse_mode="Markdown")
         return
@@ -146,15 +195,9 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ===== BACK =====
     if text == "🔙 𝐁𝐀𝐂𝐊":
         if is_admin(user_id) and user_mode.get(user_id, False):
-            text_msg = (
-                f"🎬 **𝐌𝐄𝐃𝐈𝐀 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑**\n\n"
-                f"🔑 **𝐀𝐃𝐌𝐈𝐍 𝐌𝐎𝐃𝐄**\n"
-                f"📁 **{len(video_ids)} 𝐕𝐈𝐃𝐄𝐎𝐒**\n\n"
-                f"📊 **𝐒𝐄𝐋𝐄𝐂𝐓 𝐀𝐍 𝐎𝐏𝐓𝐈𝐎𝐍**"
-            )
-            await update.message.reply_text(text_msg, parse_mode="Markdown", reply_markup=admin_menu())
+            await admin_welcome(update, context)
         else:
-            await start(update, context)
+            await send_welcome(update, context)
         return
     
     # ===== MAIN MENU =====
@@ -166,7 +209,8 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text in ["🎬 𝐑𝐀𝐍𝐃𝐎𝐌", "🎲 𝐀𝐍𝐎𝐓𝐇𝐄𝐑"]:
         if not video_ids:
             await update.message.reply_text(
-                "📭 **𝐍𝐎 𝐕𝐈𝐃𝐄𝐎𝐒 𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝐄**",
+                "📭 **𝐍𝐎 𝐕𝐈𝐃𝐄𝐎𝐒 𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝐄**\n\n"
+                "⚠️ **𝐏𝐋𝐄𝐀𝐒𝐄 𝐂𝐎𝐍𝐓𝐀𝐂𝐓 𝐀𝐃𝐌𝐈𝐍**",
                 parse_mode="Markdown",
                 reply_markup=user_menu(user_id) if not is_admin(user_id) else admin_menu()
             )
@@ -187,7 +231,8 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text in ["📌 𝐋𝐀𝐓𝐄𝐒𝐓"]:
         if not video_ids:
             await update.message.reply_text(
-                "📭 **𝐍𝐎 𝐕𝐈𝐃𝐄𝐎𝐒 𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝐄**",
+                "📭 **𝐍𝐎 𝐕𝐈𝐃𝐄𝐎𝐒 𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝐄**\n\n"
+                "⚠️ **𝐏𝐋𝐄𝐀𝐒𝐄 𝐂𝐎𝐍𝐓𝐀𝐂𝐓 𝐀𝐃𝐌𝐈𝐍**",
                 parse_mode="Markdown",
                 reply_markup=user_menu(user_id) if not is_admin(user_id) else admin_menu()
             )
@@ -208,7 +253,7 @@ async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "ℹ️ 𝐀𝐁𝐎𝐔𝐓":
         about_text = (
             f"ℹ️ **𝐀𝐁𝐎𝐔𝐓**\n\n"
-            f"🤖 **𝐁𝐎𝐓**: 𝐌𝐄𝐃𝐈𝐀 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑\n"
+            f"🤖 **𝐁𝐎𝐓**: 𝐏𝟒𝐎𝐍 𝐁𝐎𝐓\n"
             f"📌 **𝐓𝐘𝐏𝐄**: 𝐕𝐈𝐃𝐄𝐎 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑\n"
             f"📹 **𝐕𝐈𝐃𝐄𝐎𝐒**: {len(video_ids)}\n\n"
             f"💡 **𝐂𝐋𝐈𝐂𝐊 𝐁𝐔𝐓𝐓𝐎𝐍𝐒 𝐓𝐎 𝐆𝐄𝐓 𝐕𝐈𝐃𝐄𝐎𝐒**"
@@ -281,24 +326,38 @@ async def scan_channel():
     print(f"🔍 Scanning: {CHANNEL_ID}")
     
     try:
-        # Use get_chat to verify
         chat = await app.bot.get_chat(CHANNEL_ID)
         print(f"✅ Found channel: {chat.title}")
         
-        # Try to get messages using get_updates (more reliable for channels)
-        updates = await app.bot.get_updates(limit=100)
-        
-        for update in updates:
-            if update.channel_post and update.channel_post.chat.id == CHANNEL_ID:
-                if update.channel_post.video:
-                    video_ids.append(update.channel_post.video.file_id)
-                    print(f"📹 Found: {update.channel_post.video.file_id[:20]}...")
+        # Try to get messages
+        try:
+            async for msg in app.bot.get_chat_history(chat_id=CHANNEL_ID, limit=500):
+                if msg.video:
+                    video_ids.append(msg.video.file_id)
+                    print(f"📹 Found: {msg.video.file_id[:20]}...")
+        except Exception as e:
+            print(f"⚠️ get_chat_history failed: {e}")
+            # Try alternative method
+            try:
+                updates = await app.bot.get_updates(limit=200)
+                for update in updates:
+                    if update.channel_post and update.channel_post.chat.id == CHANNEL_ID:
+                        if update.channel_post.video:
+                            video_ids.append(update.channel_post.video.file_id)
+                            print(f"📹 Found via updates: {update.channel_post.video.file_id[:20]}...")
+            except Exception as e2:
+                print(f"⚠️ get_updates failed: {e2}")
         
         save_video_ids(video_ids)
         print(f"✅ Loaded {len(video_ids)} videos")
+        
+        if len(video_ids) == 0:
+            print("⚠️ No videos found! Make sure:")
+            print("   1. Bot is admin in the channel")
+            print("   2. There are videos in the channel")
+            
     except Exception as e:
         print(f"❌ Error: {e}")
-        print("Make sure the bot is admin in the channel!")
 
 async def handle_new_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.channel_post and update.channel_post.video:
@@ -312,46 +371,30 @@ async def post_init():
 # ============ HELP COMMAND ============
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if is_admin(update.effective_user.id):
-        await update.message.reply_text(
-            "🔑 **𝐀𝐃𝐌𝐈𝐍 𝐇𝐄𝐋𝐏**\n\nUse the buttons below:",
-            parse_mode="Markdown",
-            reply_markup=admin_menu()
-        )
-    else:
-        await update.message.reply_text(
-            "🎬 **𝐌𝐄𝐃𝐈𝐀 𝐃𝐈𝐒𝐓𝐑𝐈𝐁𝐔𝐓𝐎𝐑**\n\nUse the buttons below:",
-            parse_mode="Markdown",
-            reply_markup=user_menu(update.effective_user.id)
-        )
+    await start(update, context)
 
 # ============ MAIN ============
 
 async def main():
     global app
     
-    # Create application
     app = Application.builder().token(BOT_TOKEN).build()
     
-    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
     app.add_handler(MessageHandler(filters.VIDEO & filters.Chat(CHANNEL_ID), handle_new_video))
     
-    # Run post init
     await post_init()
     
-    print("🤖 Bot Running with REPLY KEYBOARD!")
+    print("🤖 Bot Running!")
     print(f"🔑 Admin ID: {ADMIN_ID}")
     print(f"📺 Channel: {CHANNEL_ID}")
     
-    # Start polling
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
     
-    # Keep running
     try:
         await asyncio.Event().wait()
     except KeyboardInterrupt:
