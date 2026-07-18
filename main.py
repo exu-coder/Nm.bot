@@ -448,6 +448,14 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text)
 
+# ============ POST INIT ============
+
+async def post_init():
+    global video_ids
+    video_ids = load_video_ids()
+    print(f"Loaded {len(video_ids)} videos from {JSON_FILE}")
+    await scan_channel()
+
 # ============ MAIN ============
 
 async def main():
