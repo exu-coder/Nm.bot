@@ -59,13 +59,17 @@ async function loadApplications(manual = false) {
   $('loading').style.display = 'block';
   if (manual) $('refresh').disabled = true;
   try {
-    const { data, error } = await supabase.rpc('demo_admin_get_applications');
+    const { data, error } = await supabase.rpc('demo_admin_get_applications', {
+      p_email: ADMIN_EMAIL,
+      p_password: ADMIN_PASSWORD
+    });
     if (error) throw error;
     applications = data || [];
     updateStats();
     render();
     $('updated').textContent = 'Live · ' + new Date().toLocaleTimeString();
   } catch (error) {
+    console.error(error);
     toast(error?.message || 'Could not load applications.');
   } finally {
     $('loading').style.display = 'none';
@@ -75,7 +79,7 @@ async function loadApplications(manual = false) {
 
 function startAutoRefresh() {
   clearInterval(refreshTimer);
-  refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') loadApplications(); }, 60000);
+  refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') loadApplications(); }, 10000);
 }
 function normalizeStatus(status) { return !status || status === 'new' ? 'pending' : status; }
 function updateStats() {
@@ -107,11 +111,16 @@ function render() {
 async function setStatus(a,status) {
   if (!loggedIn) return;
   try {
-    const { data, error } = await supabase.rpc('demo_admin_update_status',{p_id:a.id,p_status:status});
+    const { data, error } = await supabase.rpc('demo_admin_update_status', {
+      p_email: ADMIN_EMAIL,
+      p_password: ADMIN_PASSWORD,
+      p_id: a.id,
+      p_status: status
+    });
     if (error) throw error;
     if (data !== true) throw new Error('Application was not updated.');
     a.status = status; updateStats(); render(); toast(`Marked ${status}`);
-  } catch (error) { toast(error?.message || 'Could not update status.'); }
+  } catch (error) { console.error(error); toast(error?.message || 'Could not update status.'); }
 }
 function showDetail(a) {
   $('detailName').textContent = a.full_name || a.name || 'Application';
@@ -121,7 +130,7 @@ function showDetail(a) {
   $('detailDialog').showModal();
 }
 function formatDate(v) { if (!v) return '—'; const d=new Date(v); return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }
-function esc(v) { return String(v).replace(/[&<>\'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c])); }
+function esc(v) { return String(v).replace(/[&<>\'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c])); }
 let toastTimer;
 function toast(msg) { $('toast').textContent=msg; $('toast').classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000); }
 updateStats(); render();
