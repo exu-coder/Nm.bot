@@ -1,15 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
-const ADMIN_EMAIL = atob(import.meta.env.VITE_ADMIN_EMAIL_B64 || '');
-const ADMIN_PASSWORD = atob(import.meta.env.VITE_ADMIN_PASSWORD_B64 || '');
 const $ = id => document.getElementById(id);
 let applications = [];
 let loggedIn = false;
 let refreshTimer = null;
 let busy = false;
-
-const checkLogin = (email, password) => email.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase() && password === ADMIN_PASSWORD;
 
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -19,25 +12,30 @@ $('loginForm').addEventListener('submit', async e => {
   if (button) button.disabled = true;
   $('loginError').textContent = 'Checking credentials…';
   try {
-    if (!checkLogin($('email').value, $('password').value)) {
-      $('loginError').textContent = 'Invalid login credentials.';
-      return;
-    }
+    const response = await fetch('/api/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email: $('email').value, password: $('password').value})
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Invalid login credentials.');
     loggedIn = true;
     $('password').value = '';
     $('loginError').textContent = '';
     $('loginView').hidden = true;
     $('appView').hidden = false;
-    $('userEmail').textContent = ADMIN_EMAIL;
+    $('userEmail').textContent = result.email || $('email').value.trim();
     await loadApplications();
     startAutoRefresh();
+  } catch (error) {
+    $('loginError').textContent = error.message || 'Invalid login credentials.';
   } finally {
     busy = false;
     if (button) button.disabled = false;
   }
 });
 
-$('logout').addEventListener('click', () => {
+$('logout').addEventListener('click', async () => {
+  await fetch('/api/logout', {method:'POST'}).catch(() => {});
   loggedIn = false;
   clearInterval(refreshTimer);
   applications = [];
@@ -45,8 +43,7 @@ $('logout').addEventListener('click', () => {
   $('loginView').hidden = false;
   $('email').value = '';
   $('password').value = '';
-  updateStats();
-  render();
+  updateStats(); render();
 });
 $('refresh').addEventListener('click', () => loadApplications(true));
 $('search').addEventListener('input', render);
@@ -59,28 +56,27 @@ async function loadApplications(manual = false) {
   $('loading').style.display = 'block';
   if (manual) $('refresh').disabled = true;
   try {
-    const { data, error } = await supabase.rpc('demo_admin_get_applications', {
-      p_email: ADMIN_EMAIL,
-      p_password: ADMIN_PASSWORD
-    });
-    if (error) throw error;
-    applications = data || [];
-    updateStats();
-    render();
+    const response = await fetch('/api/applications', {credentials:'same-origin'});
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) return logoutFromServer();
+    if (!response.ok) throw new Error(result.error || 'Could not load applications.');
+    applications = result.data || [];
+    updateStats(); render();
     $('updated').textContent = 'Live · ' + new Date().toLocaleTimeString();
   } catch (error) {
-    console.error(error);
-    toast(error?.message || 'Could not load applications.');
+    console.error(error); toast(error.message || 'Could not load applications.');
   } finally {
     $('loading').style.display = 'none';
     if (manual) $('refresh').disabled = false;
   }
 }
 
-function startAutoRefresh() {
-  clearInterval(refreshTimer);
-  refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') loadApplications(); }, 10000);
+async function logoutFromServer() {
+  loggedIn = false; clearInterval(refreshTimer);
+  applications = []; $('appView').hidden = true; $('loginView').hidden = false;
+  updateStats(); render();
 }
+function startAutoRefresh() { clearInterval(refreshTimer); refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') loadApplications(); }, 10000); }
 function normalizeStatus(status) { return !status || status === 'new' ? 'pending' : status; }
 function updateStats() {
   $('total').textContent = applications.length;
@@ -89,8 +85,7 @@ function updateStats() {
   $('rejected').textContent = applications.filter(a => normalizeStatus(a.status) === 'rejected').length;
 }
 function filtered() {
-  const q = $('search').value.toLowerCase().trim();
-  const s = $('statusFilter').value;
+  const q = $('search').value.toLowerCase().trim(), s = $('statusFilter').value;
   return applications.filter(a => {
     const hay = [a.full_name,a.name,a.phone,a.email,a.course,a.message].filter(Boolean).join(' ').toLowerCase();
     return (!q || hay.includes(q)) && (s === 'all' || normalizeStatus(a.status) === s);
@@ -100,7 +95,7 @@ function render() {
   const rows = $('rows'); rows.innerHTML = '';
   const list = filtered(); $('empty').hidden = list.length !== 0;
   for (const a of list) {
-    const tr = document.createElement('tr'); const status = normalizeStatus(a.status);
+    const tr = document.createElement('tr'), status = normalizeStatus(a.status);
     tr.innerHTML = `<td><div class="name">${esc(a.full_name||a.name||'Unknown')}</div><div class="sub">ID ${esc(String(a.id||'').slice(0,8))}</div></td><td>${esc(a.phone||'—')}<div class="sub">${esc(a.email||'')}</div></td><td>${esc(a.course||'—')}</td><td><span class="badge ${esc(status)}">${esc(status)}</span></td><td>${formatDate(a.created_at)}</td><td><div class="actions"><button class="ghost small view">View</button><button class="ghost small approve">✓</button><button class="ghost small reject">×</button></div></td>`;
     tr.querySelector('.view').onclick = () => showDetail(a);
     tr.querySelector('.approve').onclick = () => setStatus(a,'approved');
@@ -111,16 +106,15 @@ function render() {
 async function setStatus(a,status) {
   if (!loggedIn) return;
   try {
-    const { data, error } = await supabase.rpc('demo_admin_update_status', {
-      p_email: ADMIN_EMAIL,
-      p_password: ADMIN_PASSWORD,
-      p_id: a.id,
-      p_status: status
+    const response = await fetch(`/api/applications/${encodeURIComponent(a.id)}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+      body: JSON.stringify({status})
     });
-    if (error) throw error;
-    if (data !== true) throw new Error('Application was not updated.');
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) return logoutFromServer();
+    if (!response.ok) throw new Error(result.error || 'Could not update status.');
     a.status = status; updateStats(); render(); toast(`Marked ${status}`);
-  } catch (error) { console.error(error); toast(error?.message || 'Could not update status.'); }
+  } catch (error) { console.error(error); toast(error.message || 'Could not update status.'); }
 }
 function showDetail(a) {
   $('detailName').textContent = a.full_name || a.name || 'Application';
