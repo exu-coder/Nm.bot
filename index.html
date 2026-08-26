@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#08080a">
-  <meta name="description" content="Farabi IT Center admin console">
-  <title>Farabi Admin — Applications</title>
+  <meta name="description" content="Farabi IT Center application management">
+  <title>Farabi — Applications</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,23 +14,10 @@
 <body>
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
   <main class="shell">
-    <section id="loginView" class="login glass">
-      <div class="brand-mark">F</div>
-      <span class="eyebrow">FARABI IT CENTER</span>
-      <h1>Admin Console</h1>
-      <p>Course application management.</p>
-      <form id="loginForm">
-        <label>Email<input id="email" type="email" autocomplete="username" required placeholder="admin@email.com"></label>
-        <label>Password<input id="password" type="password" autocomplete="current-password" required placeholder="••••••••"></label>
-        <button class="primary" type="submit">Sign in <span>→</span></button>
-      </form>
-      <div id="loginError" class="error" role="alert"></div>
-    </section>
-
-    <section id="appView" hidden>
+    <section id="appView">
       <header class="topbar glass">
         <div><span class="eyebrow">FARABI IT CENTER</span><h2>Applications</h2><p class="header-sub">Live application management</p></div>
-        <div class="top-actions"><span class="online"><i></i> LIVE</span><span id="userEmail" class="user-pill"></span><button id="logout" class="ghost">Sign out</button></div>
+        <div class="top-actions"><span class="online"><i></i> LIVE</span></div>
       </header>
       <section class="stats">
         <article class="stat glass"><span>Total</span><strong id="total">0</strong></article>
@@ -51,7 +38,7 @@
       </section>
     </section>
   </main>
-  <dialog id="detailDialog" class="glass-dialog"><div class="dialog-inner"><button id="closeDialog" class="close" aria-label="Close">×</button><span class="eyebrow">APPLICATION</span><h2 id="detailName">—</h2><div id="detailBody"></div></div></dialog>
+  <dialog id="detailDialog" class="glass-dialog"><div class="dialog-inner"><button id="closeDialog" class="close" aria-label="Close">×</button><span class="eyebrow">APPLICATION DETAILS</span><h2 id="detailName">—</h2><div id="detailBody"></div></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="/app.js"></script>
 </body>
